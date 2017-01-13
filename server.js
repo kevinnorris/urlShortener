@@ -1,18 +1,19 @@
 var express = require("express");
 var path = require("path");
+var base51 = require("./base51.js");
 var MongoClient = require('mongodb').MongoClient
   , assert = require('assert');
-// Short url alphabet
-var alphabet = '23456789bcdfghjkmnpqrstvwxyzBCDFGHJKLMNPQRSTVWXYZ-_',
-		base = alphabet.length;
-  
+		
 // DB Connection URL
 var url = 'mongodb://localhost:27017/urlShort';
 
-/* Express server */
 var app = express();
 
 app.use(express.static(path.join(__dirname, 'public')));
+
+/* Routs 
+--------------------
+*/
 
 app.get("/", function(req, res){
     res.sendFile(path.join(__dirname, "/index.html")); 
@@ -23,17 +24,42 @@ app.get("/new/", function(req, res){
 });
 
 app.get("/:data", function(req, res){
+    var data = req.params.data;
     console.log("/:data Received: " + req.params.data);
-    // Decode and see if in db
+    
+    if(data.length < 10){   // All safe integers fit into 10 encoded characters
+        MongoClient.connect(url, function(err, db){
+           assert.equal(null, err);
+           var urls = db.collection("urls");
+           
+            urls.findOne({"_id": base51.decode(data)}, {fields: {"original_url": 1}}, function(err, doc){
+                assert.equal(null, err);
+                console.log(doc);
+                db.close();
+                
+                if(doc){
+                    res.writeHead(301, {Location: doc.original_url});
+                    res.end();
+                }else{
+                    res.writeHead(404, {"Content-Type": "application/json"});
+                    res.end(JSON.stringify({"error": "404 This url is not in the database"}));
+                }
+            });
+        });
+    }else{
+        res.writeHead(400, {"Content-Type": "application/json"});
+        res.end(JSON.stringify({"error": "400 Url parameter is too long"}));
+    }
 });
 
 app.get("/new/*", function(req, res){
     var data = req.url.substring(5);
     console.log("/new/:data Received: " + data);
     console.log("url: ", req.url);
+    console.log("host: ", req.get("host"));
     
     // Check if valid url
-    var matches = data.match(/((http(s)?:\/\/(?:www\.)?[A-Za-z0-9\.\-]+)(\/.*)?)/);
+    var matches = data.match(/((http(s)?:\/\/(?:www\.)?[A-Za-z0-9\.\-\:]+)(\/.*)?)/);
     if(matches && matches[0] === data){
         var response;
         
@@ -47,7 +73,8 @@ app.get("/new/*", function(req, res){
                console.log("next id: ", nextId);
                
                // Build response
-               response = {"original_url": data, "short_url": encode(nextId)};
+               response = {"original_url": data, "short_url": ("https://" + req.get("host") + "/" + base51.encode(nextId))};
+               console.log(response);
                
                // Store urls in db
                urls.insert({
@@ -59,19 +86,21 @@ app.get("/new/*", function(req, res){
                     db.close();
                     
                     // Send response
-                    res.set("Content-Type", "application/json");
-                    res.send(response);
+                    res.writeHead(200, {"Content-Type": "application/json"});
+                    res.end(JSON.stringify(response));
                 })
            });
         });
         
     }else{
-        res.status(400);
-        res.send('Url does not follow convention');
+        res.writeHead(400, {"Content-Type": "application/json"});
+        res.end(JSON.stringify({"error": "400 Bad url format, make sure you are using http/https and a real site"}));
     }
 });
+
 app.listen(process.env.PORT || 8080);
 
+/* Increase a sequence value by one and returns the new value */
 function getNextSequenceValue(collection, sequenceName, callback){
 
    collection.findAndModify({_id: sequenceName },
@@ -83,29 +112,3 @@ function getNextSequenceValue(collection, sequenceName, callback){
             callback(result.value.sequence_value);
         });
 }
-
-// Encoding from https://github.com/delight-im/ShortURL/blob/master/JavaScript/ShortURL.js
-/*
-    Input: object id as number
-    Output: encoded id as string
-*/
-function encode(num) {
-	var str = '';
-	while (num > 0) {
-		str = alphabet.charAt(num % base) + str;
-		num = Math.floor(num / base);
-	}
-	return str;
-};
-
-/*
-    Input: encoded id as string
-    Output: decoded object id as num
-*/
-function decode(str) {
-	var num = 0;
-	for (var i = 0; i < str.length; i++) {
-		num = num * base + alphabet.indexOf(str.charAt(i));
-	}
-	return num;
-};

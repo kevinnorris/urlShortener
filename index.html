@@ -10,19 +10,18 @@
             <h1 class="header">
                 URL Shortener Microservice
             </h1>
-            <p>Add a url as a parameter to this url and this service will respond with a JSON object that contains the the original passed url and a shortened url.</p>
-            <p>When you visit the shortened url you will be redirected to the original url</p>
-            <h3 class="header">Example creation</h3>
-            <code>https://thissite.com/ourl</code>
+            <p>Add <code>/new/</code> and a url as a parameter to this url, and this service will respond with a JSON object that contains the the original passed url and a shortened url.</p>
+            <p>When you visit the shortened url you will be redirected to the original url.</p>
+            <h3 class="header">Example creations</h3>
+            <code>https://urlm.herokuapp.com/new/https://www.google.com</code>
+            <code>https://urlm.herokuapp.com/new/http://foo.com:80</code>
             <h3 class="header">Example creation output</h3>
             <code>
-                {
-                  "original_url": "ourl",
-                  "short_url": "surl"
-                }
+                { "original_url": "http://foo.com:80", "short_url": "https://urlm.herokuapp.com/5f" }
             </code>
             <h3 class="header">Usage</h3>
-            <p><code>surl</code> will redirect to <code>ourl</code></p>
+            <p><code>https://urlm.herokuapp.com/5f</code> will redirect to <code>http://foo.com:80</code></p>
         </div>
     </body>
 </html>
+
