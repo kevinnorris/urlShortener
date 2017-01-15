@@ -2,6 +2,8 @@
 
 ## URL shortener
 
+### __[The App](https://urlm.herokuapp.com/)__
+
 ### __Usage__
 
 To shorten a url pass it as a parameter to the apps url as follows ```[appUrl]/new/[urlToShorten]```
