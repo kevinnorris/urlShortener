@@ -5,7 +5,7 @@ var MongoClient = require('mongodb').MongoClient
   , assert = require('assert');
 		
 // DB Connection URL
-var url = 'mongodb://localhost:27017/urlShort';
+var url = process.env.MONGOLAB_URI;
 
 var app = express();
 
